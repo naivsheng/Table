@@ -203,102 +203,6 @@ class Application(Application_ui):
         t = os.path.getmtime(filePath)
         return t
 
-    def checked(self):
-        self.var.set('查看')
-        self.scr.delete(1.0, END)
-        s = ''
-        dt = datetime.now()
-        local_time = dt.strftime("%m-%d %H:%M:%S")
-        s = '查看时间：' + local_time + '\n'
-        woche = int(self.week.get())
-        if woche < 10:
-            woche = '0' + str(woche)
-        else: woche = str(woche)
-        file = 'KW' + woche + '.xlsx'
-        self.GetINFO(file)
-        if not self.cbxf.get() and not self.cbxl.get():
-            # 输出总览表
-            # TODO: 保证格式 打印 s = s + str(self.dframe)
-            self.var.set('Error')
-            tk.messagebox.showwarning('Error','请选择分店或供应商')
-        elif self.cbxf.get() and self.cbxl.get():
-            i = self.FLd[self.cbxf.get()]
-            info = str(self.dframe.at[i,self.cbxl.get()]) 
-            s = s + 'KW' + woche + ' ' + self.cbxf.get() + '  ' + self.cbxl.get() + '  详细信息:\n\n'
-            if 'b' in info:
-                s = s + '已订货 '
-                if 'r' in info:
-                    s = s + '已有发票 '
-                else: s = s + '未收发票 '
-                if 'k' in info:
-                    s = s + '已收货 '
-                    if 'z' in info: 
-                        s = s + '有拍照确认 '
-                    else: s = s + '无拍照确认 '
-                    if 'y' in info: 
-                        s = s + '点货后需投诉 '
-                        if 'w' in info:
-                            s = s + '已投诉 '
-                        elif 'i' in info:
-                            s = s + '不需要投诉'
-                    else: s = s + '一切正常'
-                else: s = s + '未收货'
-            else: s = s + '未订货'
-        elif self.cbxf.get():
-            s = s + 'KW' + woche + ' ' + self.cbxf.get() + '  详细信息:\n\n'
-            i = self.FLd[self.cbxf.get()]
-            for col in self.dframe.columns.values.tolist():
-                if col == 'ID':continue
-                elif col == 'Unnamed: 0': continue
-                # s = s + col + (10-len(col)) * 2 * ' ' +': '
-                c = '%10s' % col
-                s = s + c + ' :'
-                info = str(self.dframe.at[i,col])
-                if 'b' in info:
-                    s = s + '已订货 '
-                    if 'r' in info:
-                        s = s + '已有发票 '
-                    else: s = s + '未收发票'
-                    if 'k' in info:
-                        s = s + '已收货 '
-                        if 'z' in info: 
-                            s = s + '有拍照确认 '
-                        else: s = s + '无拍照确认 '
-                        if 'y' in info: 
-                            s = s + '点货后需投诉 '
-                            if 'w' in info:
-                                s = s + '已投诉 '
-                            elif 'i' in info:
-                                s = s + '不需要投诉 '
-                        else: s = s + '一切正常 '
-                    else: s = s + '未收货 '
-                    
-                else: s = s + '未订货 '
-                s = s + '\n'
-        else:
-            s = s + 'KW' + woche + ' ' + self.cbxl.get() + '  详细信息:\n\n'
-            for i in range(self.dframe.shape[0]):
-                info = str(self.dframe[self.cbxl.get()][i])
-                s = s + self.dframe.at[i,'ID'] + (10-len(self.dframe.at[i,'ID'])) * ' ' + ': '
-                if 'b' in info:
-                    s = s + '已订货 '
-                    if 'r' in info:
-                        s = s + '已有发票 '
-                    else: s = s + '未收发票 '
-                    if 'k' in info:
-                        s = s + '已收货 '
-                        if 'y' in info: 
-                            s = s + '点货后需投诉 '
-                        if 'w' in info:
-                            s = s + '已投诉 '
-                        elif 'i' in info:
-                            s = s + '不需要投诉'
-                        else: s = s + '一切正常'
-                    else: s = s + '未收货'
-                else: s = s + '未订货 '
-                s = s + '\n'
-        self.scr.insert(END,s)
-        # self.status.set(s)
     def Info(self):
         self.var.set('info')
         self.scr.delete(1.0, END)
@@ -323,14 +227,12 @@ class Application(Application_ui):
         now = int(time.time())
         FileTime = os.path.getmtime(file) # 时间戳
         '''
-        file_time = time.mktime(time.strftime("%Y-%m-%d %H:%M",FileTime))
-        if today > 3 and (now - FileTime > 5):
-            TableReader().Updata_to_LF(week) # 更新总览表
+            file_time = time.mktime(time.strftime("%Y-%m-%d %H:%M",FileTime))
+            if today > 3 and (now - FileTime > 5):
+                TableReader().Updata_to_LF(week) # 更新总览表
         '''
         file = 'KW' + week + '.xlsx'
         
-        # path = 'H:\\py\\test\\goasia'
-        # file_list = os.listdir(path)
         file_list = os.listdir('.')
         if file not in file_list: 
             TableReader().Writer()
@@ -354,8 +256,23 @@ class Application(Application_ui):
         return woche,b
 
     def bestell_checked(self):
-        # 点击 查看 后，从供货商文档中获取列表，对比总览表中的数据，显示本周应订
-        # 显示n周应到货、未到货信息
+        '''
+            # 点击 查看 后，从供货商文档中获取列表，对比总览表中的数据，显示本周应订
+            # 显示n周应到货、未到货信息
+        '''
+        # TODO 更改files名
+        # TODO 确认供应商单元格位置公式
+        # TODO 应订dict计算
+        # TODO 更改updata公式
+        # TODO 尝试自动刷新时间或自动刷新df数据，使变量数据为最新，防止重复操作或误操作
+        """
+            # 算法流程：
+            # 从Lieferant读取df，根据上一次订货的时间判定本周是否应该订货
+            # 生成dict，以便后续查询操作
+            # 查询应订，输出到应订栏
+            # 更改TAbleReader算法，Writer、Updata_to_LF、 Updata 
+            # 
+        """
         self.var.set('总览')
         self.blist1.delete(0,END)
         self.blist2.delete(0,END)

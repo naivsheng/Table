@@ -1,5 +1,14 @@
 # -*- coding: UTF-8 -*-
 # __author__ = 'Yingyu Wang'
+# TODO:
+# files = "KW{woche} Bestellung KW{woche+1} Lieferung Übersicht.xlsx"
+# loc(FL)[LF(dict)] 双向数据读取
+# read Lieferant总表数据->计算应订
+# 订货后把日期写入Lieferant
+# 应订列表->
+# 以LF/FL 为单位写入{LF:[FL]}
+# 根据应i的那个{}按选定得LF/FL输出到应订栏
+# 设置xlsx的条件格式(颜色等)，用以观察总览情况
 
 from tkinter import *
 #from tkinter import ttk
@@ -13,6 +22,8 @@ from TableReader import TableReader
 import time
 from datetime import datetime
 from tkinter import scrolledtext
+import sys
+from threading import Timer
 
 class Application_ui(Frame):
     #这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
@@ -22,6 +33,7 @@ class Application_ui(Frame):
         Frame.__init__(self, master)
         self.master.title('订货录入辅助')
         self.master.geometry('1000x800')
+        # sys.setrecursionlimit(100000)
         # global filePath
         filePath = os.getcwd()
         # path = 'H:\\py\\test\\goasia'
@@ -73,27 +85,27 @@ class Application_ui(Frame):
         entry_week = tk.Entry(self.top,textvariable=self.week,width=5)
         entry_week.place(x=180,y=10)
         '''
-        self.c = tk.StringVar() # 用于模糊查询
-        entry = tk.Entry(self.top,textvariable=self.c,width=5)
-        entry.place(x=550,y=10)
-        entry_button = tk.Button(self.top,text='查询', font=('Arial', 12), width=10, height=1, command=self.check)
-        entry_button.place(x=650,y=10)
+            self.c = tk.StringVar() # 用于模糊查询
+            entry = tk.Entry(self.top,textvariable=self.c,width=5)
+            entry.place(x=550,y=10)
+            entry_button = tk.Button(self.top,text='查询', font=('Arial', 12), width=10, height=1, command=self.check)
+            entry_button.place(x=650,y=10)
         '''
         # 建立下拉选框，选择分店
         l2 = tk.Label(self.top,text='分店',width=5,height=1)
         l2.place(x=240,y=10)
         valueF = StringVar()
-        self.cbxf = tk.ttk.Combobox(self.top, width = 8, height = 20, textvariable = valueF,state='readonly') #, postcommand = self.show_select)
+        self.cbxf = tk.ttk.Combobox(self.top, width = 10, height = 20, textvariable = valueF,state='readonly') #, postcommand = self.show_select)
         # self.cbxf["value"] = list(self.FL.values())
         self.L = list(self.FL.values())
         self.cbxf['value'] = self.L
         self.cbxf.place(x=280,y=10)
-        l6 = tk.Label(self.top,text='供应商',width=6,height=1)
+        l6 = tk.Label(self.top,text='供应商',width=8,height=1)
         l6.place(x=400,y=10)
         valueL = StringVar()
-        self.cbxl = tk.ttk.Combobox(self.top,width = 10, height = 20, textvariable = valueL,state='readonly')
+        self.cbxl = tk.ttk.Combobox(self.top,width = 20, height = 20, textvariable = valueL,state='readonly')
         self.cbxl["value"] = self.LF
-        self.cbxl.place(x=450,y=10)
+        self.cbxl.place(x=480,y=10)
         #self.on_hit = False
         
         '''
@@ -410,6 +422,8 @@ class Application(Application_ui):
     def get_FileModifyTime(self,filePath):
         # 获取文件更改时间
         t = os.path.getmtime(filePath)
+        # task = Timer(300,self.get_FileModifyTime(filePath))
+        # task.start()
         return time.localtime(t)
 
     def checked(self):
