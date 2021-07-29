@@ -23,8 +23,9 @@ class Application_ui(Frame):
         Frame.__init__(self, master)
         self.master.title('订货计划辅助')
         self.master.geometry('1000x800')
-        path = 'H:\\py\\test\\goasia'
-        os.chdir(path)
+        # path = 'H:\\py\\test\\goasia'
+        path = os.getcwd()
+        # os.chdir(path)
         # file_list = os.listdir(path)
         self.FL = ['']
         df = pd.read_excel('Filialen.xlsx',header = 0)

@@ -29,7 +29,8 @@ class TableReader(object):
         self.LFd = {self.LF[x]: x for x in range(len(self.LF))}
 
         self.table = []
-        path = 'H:\\py\\test\\goasia'
+        # path = 'H:\\py\\test\\goasia'
+        path = os.getcwd()
         os.chdir(path)
         
         
