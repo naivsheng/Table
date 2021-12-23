@@ -1,6 +1,3 @@
-# -*- coding: UTF-8 -*-
-# __author__ = 'Yingyu Wang'
-
 import numpy as np
 import openpyxl as op
 import os
@@ -34,16 +31,19 @@ class TableReader(object):
         os.chdir(path)
         
         
-    def Reader(self,files):
+    def Reader(self,files,sheet=None):
         # 更改目标目录
         # 读取表格数据
+        if not sheet:
+            sheet = 0
         workbook = op.load_workbook(files)
-        #sheet_name = workbook.get_sheet_names() # 获取工作表
-        worksheet = workbook.worksheets[0]      # 获取第一张工作表
+        # sheet_name = workbook.get_sheet_names() # 获取工作表
+        # worksheet = workbook.get_sheet_by_name(sheets[sheet])
+        worksheet = workbook.worksheets[sheet]      # 默认获取第一张工作表
         # 获取行、列信息
         rows = worksheet.max_row
         columns = worksheet.max_column
-        df = pd.read_excel(files, header=0) #打开Excel--.xls文件
+        df = pd.read_excel(files, header=0,sheet_name=sheet,index_col=0) #打开Excel--.xls文件
         #df = pd.read_excel(files,header=0,index_col=0)
         return(df)
 
@@ -135,7 +135,18 @@ class TableReader(object):
                 worksheet.cell(row=fl+2, column=lf+1).value = a
         # print(FL,LF)
         workbook.save(files)
-        
+    def Update_new_LF(self,LF):
+        workbook = op.load_workbook('Lieferant.xlsx') 
+        worksheet = workbook.active  
+        for i in range(len(LF)-1):
+            worksheet.cell(1,i+2,LF[i+1])
+        workbook.save('Lieferant.xlsx')
+    def Update_new_FL(self,FL):
+        workbook = op.load_workbook('Filialen.xlsx') 
+        worksheet = workbook.active  
+        for i in range(len(FL)-1):
+            worksheet.cell(i+2,1,FL[i+1])
+        workbook.save('Filialen.xlsx')
     
     def Rechange(self,files,path=None):
         # 更改目标目录
