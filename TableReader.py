@@ -128,11 +128,12 @@ class TableReader(object):
         workbook = op.load_workbook(files)
         worksheet = workbook.active
         for fl in FL:
+            if fl > 20: fl += 2
             for lf in LF:
-                a = worksheet.cell(row=fl+2, column=lf+1).value
+                a = worksheet.cell(row=fl+4, column=lf+2).value
                 if not a: a = ''
                 a = a + flag
-                worksheet.cell(row=fl+2, column=lf+1).value = a
+                worksheet.cell(row=fl+4, column=lf+2).value = a
         # print(FL,LF)
         workbook.save(files)
     def Update_new_LF(self,LF):

@@ -4,16 +4,6 @@
 # __date__: 23.12.2021
 # __Version__: 2.01 更新FL、LF表，总览表中获取准确信息
 '''
-# TODO:
-# files = "KW{woche} Bestellung KW{woche+1} Lieferung Übersicht.xlsx"
-# loc(FL)[LF(dict)] 双向数据读取
-# read Lieferant总表数据->计算应订
-# 订货后把日期写入Lieferant
-# 应订列表->
-# 以LF/FL 为单位写入{LF:[FL]}
-# 根据应订{}按选定得LF/FL输出到应订栏
-# 设置xlsx的条件格式(颜色等)，用以观察总览情况
-
 import tkinter as tk
 from tkinter.font import Font
 from tkinter.ttk import *
@@ -33,7 +23,7 @@ class Application_ui(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master.title('订货录入辅助')
-        self.master.geometry('1000x800')
+        self.master.geometry('1200x800')
         filePath = os.getcwd()
         self.FL = ['']
         df = pd.read_excel('Filialen.xlsx',header = 0)
@@ -42,22 +32,9 @@ class Application_ui(Frame):
         df = pd.read_excel('Lieferant.xlsx',header = None)
         self.LF.extend(df.iloc[0,1:])
         self.Lieferant = pd.read_excel('Lieferant.xlsx', header=0, index_col=0)   # 获取订货周期、最后一次订货时间
-        # sys.setrecursionlimit(3000)
-        self.choose_status = ['订货','发票','账单','到货','入货','传真','投诉','原件']
+        self.choose_status = ['_订货','_发票','_账单','_到货','_入货','_传真','_投诉','_原件']
         self.createWidgets()
     
-    def check(self): # TODO 模糊查询
-        self.L = []
-        e = self.c.get()
-        print(e)
-        if not e: self.L = list(self.FL.values())
-        for i in self.FLd:
-            if e in i:
-                self.L.append(i)
-        if not self.L: self.L = list(self.FL.values())
-        # if L: return(L)
-        # else: return(self.FL.values())
-
     def createWidgets(self):
         '''
             # 创建主窗口：以单选框形式进行操作转换
@@ -84,67 +61,60 @@ class Application_ui(Frame):
         l2.place(x=240,y=10)
         valueF = tk.StringVar()
         self.cbxf = tk.ttk.Combobox(self.top, width = 10, height = 20, textvariable = valueF,state='readonly') #, postcommand = self.show_select)
-        # self.L = list(self.FL.values())
         self.cbxf['value'] = self.FL
         self.cbxf.place(x=280,y=10)
         l6 = tk.Label(self.top,text='供应商',width=8,height=1)
         l6.place(x=400,y=10)
         valueL = tk.StringVar()
-        self.cbxl = tk.ttk.Combobox(self.top,width = 20, height = 20, textvariable = valueL,state='readonly')
+        self.cbxl = tk.ttk.Combobox(self.top,width = 25, height = 20, textvariable = valueL,state='readonly')
         self.cbxl["value"] = self.LF
         self.cbxl.place(x=480,y=10)
         self.choose = tk.IntVar()
         for i in range(len(self.choose_status)):
-            # grid(column=200,row=i*100+1000,pady=25,padx=10) #,columnspan=1,rowspan=i*5+10,sticky='e')
             tk.Radiobutton(self.top,text=self.choose_status[i],variable=self.choose,value=i,command=self.Operationen).place(x=50,y=i*50+100)
         l_mark = tk.Label(self.top,text='填充标记',width=10,height=1,font=('Arial', 12))
-        l_mark.place(x=780,y=50)
+        l_mark.place(x=1000,y=50)
         self.mark = tk.StringVar()
         entry_mark = tk.Entry(self.top,textvariable=self.mark,width=10,font=('Arial', 12))
-        entry_mark.place(x=780,y=80)
-        # 点击 查看 按钮，显示 应订、未订
+        entry_mark.place(x=1000,y=80)
         b1 = tk.Button(self.top, text='查看', font=('Arial', 12), width=10, height=1, command=self.bestell_checked)
-        b1.place(x=780,y=150)
-        # 点击 确认 按钮，将 已订 部分存入xls
+        b1.place(x=1000,y=150)
         b2 = tk.Button(self.top, text='确认', font=('Arial', 12), width=10, height=1, command=self.bestell_confirm)
-        b2.place(x=780,y=200)
+        b2.place(x=1000,y=200)
         # 记录文件打开时间，用以判断是否已有更改，提醒操作人刷新最新数据
         tl1 = tk.Label(self.top,text='打开当前文件的时间',width=20,font=('Arial',13))
-        tl1.place(x=780,y=400)
+        tl1.place(x=950,y=400)
         self.open_time = tk.StringVar()    
         tl2 = tk.Label(self.top, textvariable=self.open_time,font=('Arial', 14), width=12, height=1)
-        tl2.place(x=800,y=450)
+        tl2.place(x=970,y=450)
         tl3 = tk.Label(self.top,text='当前文件的更改时间',width=20,font=('Arial',13))
-        tl3.place(x=780,y=500)
+        tl3.place(x=950,y=500)
         self.file_time = tk.StringVar()    
         tl4 = tk.Label(self.top, textvariable=self.file_time,font=('Arial', 14), width=12, height=1)
-        tl4.place(x=800,y=550)
+        tl4.place(x=970,y=550)
         tl5 = tk.Label(self.top,text='当前系统时间',width=20,font=('Arial',13))
-        tl5.place(x=780,y=300)
+        tl5.place(x=950,y=300)
         self.actuelle_time = tk.StringVar()    
         tl6 = tk.Label(self.top, textvariable=self.actuelle_time,font=('Arial', 14), width=12, height=1)
-        tl6.place(x=800,y=350)
+        tl6.place(x=970,y=350)
         l3 = tk.Label(self.top,text='应标记',width=5,height=1)
-        l3.place(x=210,y=50)
+        l3.place(x=240,y=50)
         sb = Scrollbar(self.top) # 给列表增加滚动条，以防过多数据
-        self.list1 = tk.Listbox(self.top,width=20,height=45,yscrollcommand=sb.set)
+        self.list1 = tk.Listbox(self.top,width=25,height=45,yscrollcommand=sb.set)
         self.list1.place(x=160,y=70)
         sb.config(command=self.list1.yview)
         l4 = tk.Label(self.top,text='未标记',width=5,height=1)
-        l4.place(x=400,y=50)
-        self.list2 = tk.Listbox(self.top,width=20,height=45,selectmode = tk.MULTIPLE)
-        self.list2.place(x = 350,y = 70)
-        #self.list2.bind('<Double-Button-1>',self.show_select)
+        l4.place(x=520,y=50)
+        self.list2 = tk.Listbox(self.top,width=25,height=45,selectmode = tk.MULTIPLE)
+        self.list2.place(x = 450,y = 70)
         l5 = tk.Label(self.top,text='本次已操作',width=8,height=1)
-        l5.place(x=640,y=50)
-        self.list3 = tk.Listbox(self.top,width=20,height=45,selectmode = tk.MULTIPLE)
-        self.list3.place(x = 600,y = 70)
-        #self.list3.insert('')
-        #self.list3.bind('<Double-Button-1>',self.delect_select)
+        l5.place(x=820,y=50)
+        self.list3 = tk.Listbox(self.top,width=25,height=45,selectmode = tk.MULTIPLE)
+        self.list3.place(x = 750,y = 70)
         b3 = tk.Button(self.top, text='—>', font=('Arial', 12), width=5, height=1, command=self.show_select)
-        b3.place(x=520,y=300)
+        b3.place(x=670,y=300)
         b4 = tk.Button(self.top, text='<—', font=('Arial', 12), width=5, height=1, command=self.delect_select)
-        b4.place(x=520,y=350)
+        b4.place(x=670,y=350)
         info = '应标记 显示由之前的数据计算出的*周应进行的操作；未标记 以多选方式显示并记录*周本次操作前未进行的操作'
         label = tk.Label(self.top,text = info, fg='green',font=('Arial',12),width=500)
         label.pack(side=tk.BOTTOM)
@@ -181,10 +151,6 @@ class Application(Application_ui):
         '''通过单选项更改订货表单元格位置'''
         self.tab_change()
         return True
-        # print(self.mark.get())      # 填入单元格的标记
-        print(self.choose.get())    # 选择的操作
-        print(self.cbxl.get(),self.LF.index(self.cbxl.get()))
-        print(int(self.choose.get()) + 8 * self.LF.index(self.cbxl.get()))
     
     def get_FileModifyTime(self,filePath):
         '''获取文件更改时间'''
@@ -193,6 +159,7 @@ class Application(Application_ui):
         # return time.localtime(t)
 
     def checked(self):
+        '''查看总览信息'''
         self.var.set('查看')
         self.scr.delete(1.0, END)
         s = ''
@@ -380,14 +347,10 @@ class Application(Application_ui):
             # if monat == 1 and week > 10:
             #     s = get + '在' + str(year - 1) + '的第' + str(week) + '周' 
             
-            # TODO 对self.choose进行判断：
-            # 订货(0): week和上次订货时间+订货周期进行对比->是否应订货；week表订货格是否为空->是否已订货
-            # 发票、账单、到货: week表订货格(0)是否为空->是否应操作；week表相应格是否为空->是否已操作
-            # 入、传、投、原: week表到货格(3)是否为空->是否应操作；week表相应格是否为空->是否已操作
             row = self.cbxf.get()
-            col = self.cbxl.get() + '_' + self.choose_status[self.choose.get()]
+            col = self.cbxl.get() + self.choose_status[self.choose.get()]
             if str(self.dframe.at[row,col]) != 'nan':
-                message = 'KW' + woche + ' ' + self.cbxf.get() + '  ' + self.cbxl.get() + '已订货'
+                message = 'KW' + woche + ' ' + self.cbxf.get() + '  ' + self.cbxl.get() + '已标记'
                 tk.messagebox.showwarning(title='Warn',message=message)
             else:
                 self.list2.insert(END,self.cbxl.get())
@@ -396,25 +359,50 @@ class Application(Application_ui):
             # TODO 订货：应订计算； 发票等：订货判定
             row = self.cbxf.get()
             del LF_new[0]
-            LF_new = [i + '_' + self.choose_status[self.choose.get()] for i in LF_new]
+            LF_new = [i + self.choose_status[self.choose.get()] for i in LF_new]
+            if self.choose.get() == 0:
+                # TODO 计算应订
+                check = ''
+            elif self.choose.get() < 4:
+                check = '_订货'
+            else:
+                check = '_到货'
             for col in LF_new:
                 info = str(self.dframe.at[row,col])
-                if 'nan' = info:
-                    self.list1.insert(END,col)
-                if 'b' not in info:
-                # if 'b' not in info and 's' in info:
-                    self.list2.insert(END,col)
+                if not check:
+                    # list1 暂时置空
+                    pass
+                else:
+                    check_info = str(self.dframe.at[row,col.split('_')[0] + check])
+                    if check_info != 'nan': # 应进行操作
+                        self.list1.insert(END,col.split('_')[0])
+                if info == 'nan':
+                    self.list2.insert(END,col.split('_')[0])
         else:
             # 确认供货商，以门店查询
-            for i in range(self.dframe.shape[0]):
-                info = str(self.dframe[self.cbxl.get()][i])
-                if 's' in info: # 判断是否应订
-                    # print(self.dframe.at[i,'ID'])
-                    self.list1.insert(END,self.dframe.at[i,'ID'])
-                if 'b' not in info:
-                    self.list2.insert(END,self.dframe.at[i,'ID'])
+            col = self.cbxl.get() + self.choose_status[self.choose.get()]
+            if self.choose.get() == 0:
+                # list1 置空，list2填充
+                check = ''
+            elif self.choose.get() < 4:
+                check = self.cbxl.get() + '_订货'
+            else:
+                check = self.cbxl.get() + '_到货'
+            for i in self.FL:
+                if i == '':continue
+                info = str(self.dframe[self.cbxl.get() + self.choose_status[self.choose.get()]][i])
+                if not check:
+                    pass
+                else:
+                    if str(self.dframe[check][i]) != 'nan':
+                        self.list1.insert(END,i)
+                if info == 'nan':
+                    self.list2.insert(END,i)
     def bestell_confirm(self):
         '''把选定项、标记写入表格'''
+        if not self.mark.get():
+            tk.messagebox.showinfo('提示','请输入操作标记')
+            return True
         a = self.list3.size()
         woche = int(self.week.get())
         now = time.strftime("%W")
@@ -432,12 +420,13 @@ class Application(Application_ui):
             # 没有选择，直接返回
             return True
         if self.cbxf.get():
-            FL_updata.append(self.FL.index(self.cbxf.get()))
-            {LF_updata.append(self.LF.index(self.list3.get(i)) * 8 + int(self.choose.get())) for i in range(self.list3.size())}
+            FL_updata.append(self.FL.index(self.cbxf.get())) # 返回行号
+            {LF_updata.append(list(self.dframe.columns).index(self.list3.get(i) + self.choose_status[self.choose.get()])) for i in range(self.list3.size())}
         else:
-            LF_updata.append(self.LF.index(self.cbxl.get()) * 8 + int(self.choose.get()))
+            LF_updata.append(list(self.dframe.columns).index(self.cbxl.get() + self.choose_status[self.choose.get()]))
             {FL_updata.append(self.FL.index(self.list3.get(i))) for i in range(self.list3.size())}
         TableReader().Updata(file,FL_updata,LF_updata,self.mark.get())
+        # TODO 清除信息？ 停止计时？
         # self.status = False
         # self.after_cancel(self.timer) # 停止计时
         
