@@ -1,8 +1,8 @@
 '''
 # -*- coding: UTF-8 -*-
 # __Author__: Yingyu Wang
-# __date__: 23.12.2021
-# __Version__: 2.01 更新FL、LF表，总览表中获取准确信息
+# __date__: 24.12.2021
+# __Version__: 2.02 点击确认后弹窗提示操作结果；新增数据暂存，允许调回数据
 '''
 import tkinter as tk
 from tkinter.font import Font
@@ -32,9 +32,10 @@ class Application_ui(Frame):
         df = pd.read_excel('Lieferant.xlsx',header = None)
         self.LF.extend(df.iloc[0,1:])
         self.Lieferant = pd.read_excel('Lieferant.xlsx', header=0, index_col=0)   # 获取订货周期、最后一次订货时间
-        self.choose_status = ['_订货','_发票','_账单','_到货','_入货','_传真','_投诉','_原件']
+        self.choose_status = ['_订货','_发送','_帐单','_到货','_入货','_传真','_投诉','_原件']
+        self.dist = {}
         self.createWidgets()
-    
+        
     def createWidgets(self):
         '''
             # 创建主窗口：以单选框形式进行操作转换
@@ -81,22 +82,24 @@ class Application_ui(Frame):
         b1.place(x=1000,y=150)
         b2 = tk.Button(self.top, text='确认', font=('Arial', 12), width=10, height=1, command=self.bestell_confirm)
         b2.place(x=1000,y=200)
+        b5 = tk.Button(self.top, text='查看暂存', font=('Arial', 12), width=10, height=1, command=self.loads)
+        b5.place(x=1000,y=250)
         # 记录文件打开时间，用以判断是否已有更改，提醒操作人刷新最新数据
         tl1 = tk.Label(self.top,text='打开当前文件的时间',width=20,font=('Arial',13))
-        tl1.place(x=950,y=400)
+        tl1.place(x=950,y=450)
         self.open_time = tk.StringVar()    
         tl2 = tk.Label(self.top, textvariable=self.open_time,font=('Arial', 14), width=12, height=1)
-        tl2.place(x=970,y=450)
+        tl2.place(x=970,y=500)
         tl3 = tk.Label(self.top,text='当前文件的更改时间',width=20,font=('Arial',13))
-        tl3.place(x=950,y=500)
+        tl3.place(x=950,y=550)
         self.file_time = tk.StringVar()    
         tl4 = tk.Label(self.top, textvariable=self.file_time,font=('Arial', 14), width=12, height=1)
-        tl4.place(x=970,y=550)
+        tl4.place(x=970,y=600)
         tl5 = tk.Label(self.top,text='当前系统时间',width=20,font=('Arial',13))
-        tl5.place(x=950,y=300)
+        tl5.place(x=950,y=350)
         self.actuelle_time = tk.StringVar()    
         tl6 = tk.Label(self.top, textvariable=self.actuelle_time,font=('Arial', 14), width=12, height=1)
-        tl6.place(x=970,y=350)
+        tl6.place(x=970,y=400)
         l3 = tk.Label(self.top,text='应标记',width=5,height=1)
         l3.place(x=240,y=50)
         sb = Scrollbar(self.top) # 给列表增加滚动条，以防过多数据
@@ -123,7 +126,8 @@ class Application_ui(Frame):
         b_info.place(x=800,y=10)
         self.status = False
         self.refresh_data()
-         
+        # self.top.protocol('WM_DELETE_WINDOW',self.closeWindow()) # 报错
+
 class Application(Application_ui):
     # 这个类实现具体的事件处理回调函数。界面生成代码在Application_ui中。
     # 多标签页代码汇总，以节省运算空间
@@ -143,7 +147,7 @@ class Application(Application_ui):
             tk.messagebox.showinfo('提示','请点击查看以刷新数据')
         else:
             self.status = True
-            tk.messagebox.showinfo('提示','本程序将进行每十分钟弹窗提醒，不会对操作内容产生影响')
+            tk.messagebox.showinfo('提示','本程序将进行每三十分钟弹窗提醒，不会对操作内容产生影响')
         # t = os.path.getmtime(filePath)
         # self.file_time.set(time.strftime("%m-%d %H:%M:%S",time.localtime(t)))
     
@@ -158,112 +162,15 @@ class Application(Application_ui):
         self.file_time.set(time.strftime("%m-%d %H:%M:%S",time.localtime(t)))
         # return time.localtime(t)
 
-    def checked(self):
-        '''查看总览信息'''
-        self.var.set('查看')
-        self.scr.delete(1.0, END)
-        s = ''
-        local_time = time.strftime("%m-%d %H:%M:%S", time.localtime())
-        s = '查看时间：' + local_time + '\n'
-        woche = int(self.week.get())
-        if woche < 10:
-            woche = '0' + str(woche)
-        else: woche = str(woche)
-        file = 'KW' + woche + '.xlsx'
-        self.GetINFO(file)
-        if not self.cbxf.get() and not self.cbxl.get():
-            # 输出总览表
-            # TODO: 保证格式 打印 s = s + str(self.dframe)
-            self.var.set('Error')
-            tk.messagebox.showwarning('Error','请选择分店或供应商')
-        elif self.cbxf.get() and self.cbxl.get():
-            i = self.FLd[self.cbxf.get()]
-            info = str(self.dframe.at[i,self.cbxl.get()]) 
-            s = s + 'KW' + woche + ' ' + self.cbxf.get() + '  ' + self.cbxl.get() + '  详细信息:\n\n'
-            if 'b' in info:
-                s = s + '已订货 '
-                if 'r' in info:
-                    s = s + '已有发票 '
-                else: s = s + '未收发票 '
-                if 'k' in info:
-                    s = s + '已收货 '
-                    if 'z' in info: 
-                        s = s + '有拍照确认 '
-                    else: s = s + '无拍照确认 '
-                    if 'y' in info: 
-                        s = s + '点货后需投诉 '
-                        if 'w' in info:
-                            s = s + '已投诉 '
-                        elif 'i' in info:
-                            s = s + '不需要投诉'
-                    else: s = s + '一切正常'
-                else: s = s + '未收货'
-            else: s = s + '未订货'
-        elif self.cbxf.get():
-            s = s + 'KW' + woche + ' ' + self.cbxf.get() + '  详细信息:\n\n'
-            i = self.FLd[self.cbxf.get()]
-            for col in self.dframe.columns.values.tolist():
-                if col == 'ID':continue
-                elif col == 'Unnamed: 0': continue
-                # s = s + col + (10-len(col)) * 2 * ' ' +': '
-                c = '%10s' % col
-                s = s + c + ' :'
-                info = str(self.dframe.at[i,col])
-                if 'b' in info:
-                    s = s + '已订货 '
-                    if 'r' in info:
-                        s = s + '已有发票 '
-                    else: s = s + '未收发票'
-                    if 'k' in info:
-                        s = s + '已收货 '
-                        if 'z' in info: 
-                            s = s + '有拍照确认 '
-                        else: s = s + '无拍照确认 '
-                        if 'y' in info: 
-                            s = s + '点货后需投诉 '
-                            if 'w' in info:
-                                s = s + '已投诉 '
-                            elif 'i' in info:
-                                s = s + '不需要投诉 '
-                        else: s = s + '一切正常 '
-                    else: s = s + '未收货 '
-                    
-                else: s = s + '未订货 '
-                s = s + '\n'
-        else:
-            s = s + 'KW' + woche + ' ' + self.cbxl.get() + '  详细信息:\n\n'
-            for i in range(self.dframe.shape[0]):
-                info = str(self.dframe[self.cbxl.get()][i])
-                s = s + self.dframe.at[i,'ID'] + (10-len(self.dframe.at[i,'ID'])) * ' ' + ': '
-                if 'b' in info:
-                    s = s + '已订货 '
-                    if 'r' in info:
-                        s = s + '已有发票 '
-                    else: s = s + '未收发票 '
-                    if 'k' in info:
-                        s = s + '已收货 '
-                        if 'y' in info: 
-                            s = s + '点货后需投诉 '
-                        if 'w' in info:
-                            s = s + '已投诉 '
-                        elif 'i' in info:
-                            s = s + '不需要投诉'
-                        else: s = s + '一切正常'
-                    else: s = s + '未收货'
-                else: s = s + '未订货 '
-                s = s + '\n'
-        self.scr.insert(END,s)
-        # self.status.set(s)
     def Info(self):
         '''弹窗显示说明'''
         self.var.set('info')
-        top = Toplevel()
-        top.geometry('795x690')
-        top.title('Info')
-        self.scr = scrolledtext.ScrolledText(top, width=76, height=35,font=("隶书",14),bg='whitesmoke')    # 加入滚动条以输出多行文本
+        tops = Toplevel()
+        tops.geometry('795x690')
+        tops.title('Info')
+        self.scr = scrolledtext.ScrolledText(tops, width=76, height=35,font=("隶书",14),bg='whitesmoke')    # 加入滚动条以输出多行文本
         self.scr.place(x=10,y=10)
-        # self.scr.delete(1.0, END)
-        files = 'INFO.txt'
+        files = 'Readme.md'
         s = '现有功能及使用说明\n'
         with open(files,'r',encoding='utf-8') as f1:
             line = f1.readline()
@@ -425,11 +332,33 @@ class Application(Application_ui):
         else:
             LF_updata.append(list(self.dframe.columns).index(self.cbxl.get() + self.choose_status[self.choose.get()]))
             {FL_updata.append(self.FL.index(self.list3.get(i))) for i in range(self.list3.size())}
-        TableReader().Updata(file,FL_updata,LF_updata,self.mark.get())
+        try:
+            TableReader().Updata(file,FL_updata,LF_updata,self.mark.get())
+            tk.messagebox.showinfo('成功','本次操作已成功写入')
+            self.list3.delete(0,END) # 清除已操作列表信息
+        except:
+            # 写入失败提示
+            tk.messagebox.showinfo('提示','当前表格正在使用\n请稍后再次尝试')
+            # TODO 写入暂存 
+            key = self.cbxf.get() if self.cbxf.get() else self.cbxl.get()
+            self.dist[key] = [list(self.list3.get(0,END)),self.choose_status[self.choose.get()],self.mark.get()]
         # TODO 清除信息？ 停止计时？
         # self.status = False
         # self.after_cancel(self.timer) # 停止计时
-        
+
+    def loads(self):
+        if not self.dist:
+            tk.messagebox.showinfo('提示','未读取到暂存信息')
+            return True
+        self.var.set('暂存区')
+        top = Toplevel()
+        top.geometry('795x690')
+        top.title('暂存区')
+        listbox = tk.Listbox(top,width=25,height=20,selectmode=single)#yscrollcommand=sb.set, # TODO sb, single导入丢失
+        listbox.place(x=10,y=10)
+        {listbox.insert(END,i) for i in self.dist}
+        print(self.dist)
+
     def show_select(self,*args):
         a = self.list2.size()
         for i in range(a):
@@ -446,11 +375,22 @@ class Application(Application_ui):
                 self.list2.insert(END,self.list3.get(a-1-i))
                 self.list3.delete(a-1-i)
 
+    def closeWindow(self):
+        '''关闭窗口'''
+        pass
+        if self.dist:
+            a = tk.messagebox.askquestion(title='警告',message='暂存区仍有数据，是否放弃暂存区的数据')
+            if a:
+                Top.destroy()
+            else:
+                return True
+        else:
+            Top.destroy()
+        
 if __name__ == "__main__":
-    # df = pd.read_excel('KW29 Bestellung KW30 Lieferung Übersicht.xlsx', header=0)
-    # print(df.iat[3,3]) # 读取D5的数据
-    top = tk.Tk()
-    Application(top).mainloop()
+    Top = tk.Tk()
+    #top.protocol('WM_DELETE_WINDOW',end())
+    Application(Top).mainloop()
     
     # TODO:
     # 应订update 建新UI处理
@@ -463,3 +403,8 @@ if __name__ == "__main__":
     # 根据订货表以供货商为单位建立到货表（供货商、时间）->以店为单位发送到各店
     # 到货表： 根据分店、供货商到货时间、板数
     # 当周到（算法实现？x）、下周到(W标记固定周几)、几天后到(T标记订货后几天到)；标记订货时间？how计算T状况的到货情况
+
+    # 根据订货周期更改KW
+    # 数据暂存：为未能成功写入的信息建立缓存，以便进行其他操作。
+    # 缓存格式为
+    # 从暂存数据中根据操作情况进行提取
