@@ -18,12 +18,12 @@ class TableReader(object):
         self.FL = ['']
         df = pd.read_excel('Filialen.xlsx',header = 0)
         self.FL.extend(df.iloc[:,0])
-        self.FL = {x: self.FL[x] for x in range(len(self.FL))}
-        self.FLd = {self.FL[x]:x-1 for x in range(len(self.FL))}
+        # self.FL = {x: self.FL[x] for x in range(len(self.FL))}
+        # self.FLd = {self.FL[x]:x-1 for x in range(len(self.FL))}
         self.LF = ['']
         df = pd.read_excel('Lieferant.xlsx',header = 0)
         self.LF.extend(df.iloc[:,0])
-        self.LFd = {self.LF[x]: x for x in range(len(self.LF))}
+        # self.LFd = {self.LF[x]: x for x in range(len(self.LF))}
 
         self.table = []
         # path = 'H:\\py\\test\\goasia'
@@ -75,7 +75,7 @@ class TableReader(object):
             for i in self.FL:
                 # int(df.at[LFd[j]-1,FL[i]]) 收货周
                 if not i: continue
-                a = df.at[self.LFd[j]-1,self.FL[i]]
+                a = df.at[self.LFd[j]-1,i]
                 if a == '-': continue               # 用于标记：跳过无需订货项
                 elif not a: a = 0
                 else: a = int(a[2:4]) # 截取KW数据
@@ -86,22 +86,22 @@ class TableReader(object):
             self.Updata(file_name,l,a,'s')
         
     def Refresh(self,FL,LF,woche=None):
-            # 允许进行补录：默认woche传入值为空，若有传入值则为补录，写入传入值信息
-            # today = datetime.now().strftime('%Y-%m-%d') # 获取今天日期
-            today = datetime.now().strftime('%d-%m-%Y') # 获取今天日期
-            if not woche: # 判断是否为补录信息
-                woche = time.strftime("%W")
-                a = 'KW%2s %s' % (woche,today)
-            else: # 补录信息，无需写入具体日期
-                a = 'KW%2s' % (woche)
-            workbook = op.load_workbook('Lieferant.xlsx')
-            worksheet = workbook.active
-            for fl in FL:
-                for lf in LF:
-                    # worksheet.cell(row=fl+2,column=lf+1).value = a # 写入总览表
-                    worksheet.cell(row=lf+1,column=fl+3).value = a
-            workbook.save('Lieferant.xlsx')
-            # TODO： 7-10天（工作日）预估到货时间，跨度到星期一的货记入前一周
+        # 允许进行补录：默认woche传入值为空，若有传入值则为补录，写入传入值信息
+        print(FL,LF)
+        df = pd.read_excel('Lieferant.xlsx',header = 0,index_col=0) # TODO 确认FL、LF信息
+        self.FL = list(df.index)
+        # self.FL.pop('订货周期')
+        self.LF = list(df)
+        print(self.LF,self.FL)
+        workbook = op.load_workbook('Lieferant.xlsx')
+        worksheet = workbook.active
+        for fl in FL:
+            for lf in LF:
+                row = self.FL.index(fl)
+                col = self.LF.index(lf)
+                worksheet.cell(row=row+2,column=col+2).value = woche
+        workbook.save('Lieferant.xlsx')
+        # TODO： 7-10天（工作日）预估到货时间，跨度到星期一的货记入前一周
 
     def Updata_to_LF(self,week):   
         # 更新总览表
