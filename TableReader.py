@@ -11,25 +11,19 @@ class TableReader(object):
         '''
         # 1.读取 excel/csv 表格内容
         # 2.根据订货信息更新表格
-        # 3.在供货商文档增加“上次预定时间”列，用以记录并计算下次预定时间
         # 在订货点击确认按钮后自动调用Refresh函数，更新总览表记录订货操作的具体日期
         # TBC
         '''
         self.FL = ['']
         df = pd.read_excel('Filialen.xlsx',header = 0)
         self.FL.extend(df.iloc[:,0])
-        # self.FL = {x: self.FL[x] for x in range(len(self.FL))}
-        # self.FLd = {self.FL[x]:x-1 for x in range(len(self.FL))}
         self.LF = ['']
         df = pd.read_excel('Lieferant.xlsx',header = 0)
         self.LF.extend(df.iloc[:,0])
-        # self.LFd = {self.LF[x]: x for x in range(len(self.LF))}
-
         self.table = []
         # path = 'H:\\py\\test\\goasia'
         path = os.getcwd()
         os.chdir(path)
-        
         
     def Reader(self,files,sheet=None):
         # 更改目标目录
@@ -87,12 +81,10 @@ class TableReader(object):
         
     def Refresh(self,FL,LF,woche=None):
         # 允许进行补录：默认woche传入值为空，若有传入值则为补录，写入传入值信息
-        print(FL,LF)
         df = pd.read_excel('Lieferant.xlsx',header = 0,index_col=0) # TODO 确认FL、LF信息
         self.FL = list(df.index)
         # self.FL.pop('订货周期')
         self.LF = list(df)
-        print(self.LF,self.FL)
         workbook = op.load_workbook('Lieferant.xlsx')
         worksheet = workbook.active
         for fl in FL:
@@ -101,8 +93,7 @@ class TableReader(object):
                 col = self.LF.index(lf)
                 worksheet.cell(row=row+2,column=col+2).value = woche
         workbook.save('Lieferant.xlsx')
-        # TODO： 7-10天（工作日）预估到货时间，跨度到星期一的货记入前一周
-
+        
     def Updata_to_LF(self,week):   
         # 更新总览表
         # 读取*周信息，判断‘k/s’是否在info中，更新df1、构建新总览表
@@ -142,13 +133,21 @@ class TableReader(object):
         for i in range(len(LF)-1):
             worksheet.cell(1,i+2,LF[i+1])
         workbook.save('Lieferant.xlsx')
-    def Update_new_FL(self,FL):
-        workbook = op.load_workbook('Filialen.xlsx') 
+        workbook = op.load_workbook('LF_ankunft.xlsx') 
         worksheet = workbook.active  
-        for i in range(len(FL)-1):
-            worksheet.cell(i+2,1,FL[i+1])
-        workbook.save('Filialen.xlsx')
-    
+        for i in range(len(LF)-1):
+            worksheet.cell(1,i+2,LF[i+1])
+        workbook.save('LF_ankunft.xlsx')
+    def Update_new_FL(self,FL):
+        workbook = op.load_workbook('Lieferant.xlsx')
+        worksheet = workbook.active
+        {worksheet.cell(i+3,1,FL[i+1]) for i in range(len(FL)-1)}
+        workbook.save('Lieferant.xlsx')
+        workbook = op.load_workbook('LF_ankunft.xlsx')
+        worksheet = workbook.active
+        {worksheet.cell(i+3,1,FL[i+1]) for i in range(len(FL)-1)}
+        workbook.save('LF_ankunft.xlsx')
+        
     def Rechange(self,files,path=None):
         # 更改目标目录
         # 读取表格数据

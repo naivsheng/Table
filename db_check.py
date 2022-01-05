@@ -1,8 +1,8 @@
 '''
 # -*- coding: UTF-8 -*-
 # __Author__: Yingyu Wang
-# __date__: 24.12.2021
-# __Version__: 2.02 点击确认后弹窗提示操作结果；新增数据暂存，允许调回数据
+# __date__: 05.01.2022
+# __Version__: 2.03 新增到货表生成
 '''
 import tkinter as tk
 from tkinter.font import Font
@@ -12,9 +12,11 @@ import os
 import pandas as pd
 from TableReader import TableReader
 import time
-from datetime import datetime
+from datetime import datetime,date,timedelta
 import sys
 from threading import Timer
+from openpyxl import load_workbook,Workbook
+import calendar
 
 class Application_ui(Frame):
     # 这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
@@ -24,12 +26,15 @@ class Application_ui(Frame):
         self.master.title('订货录入辅助')
         self.master.geometry('1200x800')
         filePath = os.getcwd()
-        self.FL = ['']
-        df = pd.read_excel('Filialen.xlsx',header = 0)
-        self.FL.extend(df.iloc[:,0])
         self.LF = ['']
         df = pd.read_excel('Lieferant.xlsx',header = None)
         self.LF.extend(df.iloc[0,1:])
+        self.FL = list(df.iloc[1:,0])
+        self.FL[0] = ''
+        for i in range(len(self.FL)-1,0,-1):
+            if str(self.FL[i]) == 'nan':
+                self.FL.pop(i)
+            else: break
         self.choose_status = ['_订货','_发送','_帐单','_到货','_入货','_传真','_投诉','_原件']
         self.dist = {}
         self.createWidgets()
@@ -123,6 +128,8 @@ class Application_ui(Frame):
         self.top.iconbitmap('goasia.ico')
         b_info = tk.Button(self.top, text='说明', font=('Arial', 12), width=10, height=1, command=self.Info)
         b_info.place(x=800,y=10)
+        b_set = tk.Button(self.top,text='到货表',font=('Arial',12),width=10,height=1,command=self.ankunft)
+        b_set.place(x=900,y=10)
         self.status = False
         self.refresh_data()
         # self.top.protocol('WM_DELETE_WINDOW',self.closeWindow()) # 报错
@@ -151,7 +158,9 @@ class Application(Application_ui):
         # self.file_time.set(time.strftime("%m-%d %H:%M:%S",time.localtime(t)))
     
     def Operationen(self):
-        '''通过单选项更改订货表单元格位置'''
+        '''通过单选项更改订货表单元格位置,填入预设标识'''
+        if self.choose.get() == 6:
+            self.mark.set('g')
         self.tab_change()
         return True
     
@@ -293,6 +302,7 @@ class Application(Application_ui):
         else:
             FL = self.FL
             LF = [self.cbxl.get()]
+        # print(Lieferant)
         for row in FL:
             if row == '':
                 continue
@@ -359,7 +369,7 @@ class Application(Application_ui):
             # 写入暂存 
             key = self.cbxf.get() if self.cbxf.get() else self.cbxl.get()
             key = key + self.choose_status[self.choose.get()]
-            self.dist[key] = [list(self.list3.get(0,tk.END)),self.mark.get()]
+            self.dist[key] = [list(self.list3.get(0,tk.END)),self.week.get(),self.mark.get()]
         
     def loads(self):
         '''从储存区获取数据'''
@@ -396,7 +406,7 @@ class Application(Application_ui):
             self.week.set(self.dist[key][1])
             self.mark.set(self.dist[key][-1])
             {self.list3.insert(tk.END,i) for i in self.dist[key][0]}
-        
+            
         b_confirm = tk.Button(top, text='提取', font=('Arial', 12), width=5, height=1, command=park)
         b_confirm.place(x=50,y=400)
         
@@ -429,7 +439,92 @@ class Application(Application_ui):
                 self.list3.delete(a-1-i)
     def dist(self):
         return self.dist
+    def nextmontag(self,woche):
+        ''' 给定KW返回周一、下周一'''
+        # 根据返回值进行到货时间判断
+        delta = datetime.now().weekday()    # 周一为0，即可视为delta
+        w = datetime.now().strftime("%W")
+        y = int(datetime.now().strftime('%Y'))
+        if int(woche) != w:
+            # 非本周订货,即表单为过去补录,需返回给定周的周一、下周一信息
+            day_jan_4th = date(y, 1, 4)
+            first_week_start = day_jan_4th - timedelta(days=day_jan_4th.isoweekday()-1)
+            Monday = first_week_start + timedelta(weeks=int(woche)-1)
+            nextMonday = Monday + timedelta(days=7)
+        else:
+            today = date.today()   # datetime.date 格式 YYYY-mm-dd
+            Monday = today - timedelta(days = delta)
+            nextMonday = today + timedelta(days=7-delta)
+        return Monday,nextMonday
 
+    def ankunft(self):
+        '''生成到货计划表'''
+        self.var.set('生成中')
+        file = 'LF_ankunft.xlsx' # 读取到货时间表, 此表表头由Lieferant表赋值
+        dframe_a = TableReader().Reader(file)
+        woche = time.strftime("%W").zfill(2)
+        nextwoche = str(int(woche) + 1).zfill(2)
+        file = f'KW{woche} Bestellung KW{nextwoche} Lieferung Übersicht.xlsx'
+        self.GetINFO(file)
+        new_col = []
+        for col in list(self.dframe): # 遍历列名
+            a = str(self.dframe[col][1]) if str(self.dframe[col][1]) != 'nan' else a
+            new_col.append(f'{a}_{self.dframe[col][2]}')
+        self.dframe.columns = new_col
+        montag,nextmonday = self.nextmontag(woche)
+        wb = Workbook()
+        wb = Workbook(write_only=True)
+        files = 'KW' + nextwoche + ' Ankunft.xlsx'
+        wb.save(files)
+        for i in self.FL:
+            if i == '': continue
+            L = {}
+            L[i] = ['Mo','Di','Mi','Do','Fr','是否退货','成功退货']   # 表头：门店全称
+            wb = load_workbook(files)
+            writer = pd.ExcelWriter(files,engine='openpyxl')
+            writer.book = wb
+            for j in self.LF:
+                if j == '': continue
+                col = j+'_订货'
+                L[j] = ['','','','','','','']
+                if str(self.dframe.loc[i,col]) == 'nan' or str(self.dframe.loc[i,col]) == '': continue # 跳过未订
+                data = dframe_a.loc[i,j]
+                try:
+                    flag = data[0]
+                    data = int(data[1:])
+                except:
+                    flag = '?'
+                if flag == 'W' or flag == 'w':# 固定某天到
+                    L[j][data-1] = 'X'
+                elif flag == '?': #未标记到货时间
+                    L[j][4] = '?'
+                else: # TODO T10 订货后几天到
+                    pass
+                                        
+            df1 = pd.DataFrame(L)
+            df1 = df1.T
+            df1.to_excel(writer, sheet_name=i)
+            writer.save()
+        # 更改表头： 删除多余信息，写入KW
+        workbook = load_workbook(files)
+        i = 1
+        nextsunday = nextmonday + timedelta(days=6)
+        kw = 'KW ' + str(nextwoche) + ' : ' + str(nextmonday) + ' bis ' + str(nextsunday)
+        while True:
+            worksheet = workbook.worksheets[i]
+            for j in range(1,8):
+                worksheet.cell(1,j + 1).value = ''
+            worksheet.cell(1,1).value = kw
+            worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=8)
+            i += 1
+            try: workbook.worksheets[i]
+            except: break
+        ws = workbook["Sheet"]
+        workbook.remove(ws)
+        workbook.save(files)
+        self.var.set('完成')
+            
+        
 def closeWindow(aa):
     '''关闭窗口'''
     pass
@@ -452,18 +547,3 @@ if __name__ == "__main__":
     pass
     Application(Top).mainloop()
     
-    # TODO:
-    # 应订update 建新UI处理
-    # UI：保留应订；提供自定义选项，允许进行加减操作，生成订货表
-    # 建立新表：按分店、供货商查询订货周期
-    # 查看上一周的订货信息
-    # 创建订货表： 订货时间提醒、某供货商送货的固定路线->门店(现：供货商、时间，表格内容门店)
-    
-    # 生成到货表（需要建立新表记录各供货商、门店到货时间信息）
-    # 根据订货表以供货商为单位建立到货表（供货商、时间）->以店为单位发送到各店
-    # 到货表： 根据分店、供货商到货时间、板数
-    # 当周到（算法实现？x）、下周到(W标记固定周几)、几天后到(T标记订货后几天到)；标记订货时间？how计算T状况的到货情况
-
-    # 根据订货周期更改KW    x
-    # 数据暂存：为未能成功写入的信息建立缓存，以便进行其他操作;允许用户自助提交缓存信息。 √
-    # 从暂存数据中根据操作情况进行提取  √
